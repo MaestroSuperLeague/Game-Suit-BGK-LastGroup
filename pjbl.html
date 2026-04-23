@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Suit Gunung 2 Player</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #eef6ff;
+  }
+
+  .mountain {
+    position: relative;
+    width: 420px;
+    height: 340px;
+    margin: 20px auto;
+    background: linear-gradient(#b3d9ff, #8fd19e);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .finish {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 40px;
+  }
+
+  .cell {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border: 2px solid #333;
+    background: white;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  #countdown {
+    font-size: 48px;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+
+  #info {
+    font-size: 18px;
+    margin-top: 10px;
+  }
+
+  button {
+    margin: 6px;
+    padding: 8px 18px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>🐰 Suit Gunung 🥕</h1>
+
+<div class="mountain" id="mountain">
+  <div class="finish">🥕</div>
+</div>
+
+<div id="countdown"></div>
+<div id="info">Klik START untuk mulai</div>
+
+<button onclick="startGame()">▶ START</button>
+<button onclick="restart()">🔁 Restart</button>
+
+<p>
+<b>P1:</b> A=Batu | S=Gunting | D=Kertas<br>
+<b>P2:</b> J=Batu | K=Gunting | L=Kertas
+</p>
+
+<script>
+const FINISH = 5;
+const mountain = document.getElementById("mountain");
+
+let p1Pos = 0, p2Pos = 0;
+let p1Choice = null, p2Choice = null;
+let p1Time = 0, p2Time = 0;
+let phase = "idle";
+
+function getPosition(player, step) {
+  const bottomY = 260;
+  const topY = 60;
+  const yStep = (bottomY - topY) / (FINISH - 1);
+
+  const centerX = 210;
+  const spread = 150 - step * 25;
+
+  const x = player === 1
+    ? centerX - spread
+    : centerX + spread;
+
+  const y = bottomY - step * yStep;
+  return { x, y };
+}
+
+function draw() {
+  document.querySelectorAll(".cell").forEach(e => e.remove());
+
+  for (let i = 0; i < FINISH; i++) {
+    let p1 = document.createElement("div");
+    p1.className = "cell";
+    let pos1 = getPosition(1, i);
+    p1.style.left = pos1.x + "px";
+    p1.style.top = pos1.y + "px";
+    if (i === p1Pos) p1.textContent = "🐰";
+    mountain.appendChild(p1);
+
+    let p2 = document.createElement("div");
+    p2.className = "cell";
+    let pos2 = getPosition(2, i);
+    p2.style.left = pos2.x + "px";
+    p2.style.top = pos2.y + "px";
+    if (i === p2Pos) p2.textContent = "🐰";
+    mountain.appendChild(p2);
+  }
+}
+
+function startGame() {
+  if (phase !== "idle") return;
+
+  phase = "countdown";
+  let t = 3;
+  countdown.textContent = t;
+  info.textContent = "";
+
+  const timer = setInterval(() => {
+    t--;
+    if (t > 0) {
+      countdown.textContent = t;
+    } else {
+      clearInterval(timer);
+      countdown.textContent = "GO!";
+      phase = "play";
+      setTimeout(() => countdown.textContent = "", 700);
+    }
+  }, 1000);
+}
+
+function suitResult(a, b) {
+  if (a === b) return "seri";
+  if (
+    (a==="batu" && b==="gunting") ||
+    (a==="gunting" && b==="kertas") ||
+    (a==="kertas" && b==="batu")
+  ) return "p1";
+  return "p2";
+}
+
+function checkRound() {
+  if (p1Choice && p2Choice) {
+    phase = "idle";
+    let diff = Math.abs(p1Time - p2Time);
+
+    if (diff > 1000) {
+      info.textContent = "❌ Tidak bareng (selisih > 1 detik)";
+    } else {
+      let r = suitResult(p1Choice, p2Choice);
+      if (r === "p1") p1Pos++;
+      if (r === "p2") p2Pos++;
+      draw();
+
+      if (p1Pos === FINISH - 1) {
+        info.textContent = "🏆 PLAYER 1 SAMPAI WORTEL!";
+        phase = "end"; return;
+      }
+      if (p2Pos === FINISH - 1) {
+        info.textContent = "🏆 PLAYER 2 SAMPAI WORTEL!";
+        phase = "end"; return;
+      }
+      info.textContent = "Ronde selesai — klik START";
+    }
+    p1Choice = p2Choice = null;
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (phase !== "play") return;
+  let k = e.key.toLowerCase();
+
+  if (!p1Choice) {
+    if (k==="a") {p1Choice="batu"; p1Time=Date.now();}
+    if (k==="s") {p1Choice="gunting"; p1Time=Date.now();}
+    if (k==="d") {p1Choice="kertas"; p1Time=Date.now();}
+  }
+  if (!p2Choice) {
+    if (k==="j") {p2Choice="batu"; p2Time=Date.now();}
+    if (k==="k") {p2Choice="gunting"; p2Time=Date.now();}
+    if (k==="l") {p2Choice="kertas"; p2Time=Date.now();}
+  }
+  checkRound();
+});
+
+function restart() {
+  p1Pos = p2Pos = 0;
+  p1Choice = p2Choice = null;
+  phase = "idle";
+  info.textContent = "Klik START untuk mulai";
+  countdown.textContent = "";
+  draw();
+}
+
+draw();
+</script>
+
+</body>
+</html>
